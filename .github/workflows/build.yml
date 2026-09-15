@@ -8,23 +8,57 @@ permissions:
   contents: write
 
 jobs:
-  build:
+  build-x64:
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v7
-
-      - name: Build onefile exe with PyInstaller
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          architecture: x64
+      - name: "Build onefile exe (x64)"
         shell: pwsh
         run: |
           python -m pip install --upgrade pyinstaller
           python -m PyInstaller --onefile --name rsb_client_py rsb_client.py
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rsb_client_py_x64
+          path: dist/rsb_client_py.exe
 
-      - name: "Publish as release (tag: latest)"
+  build-x86:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.13"
+          architecture: x86
+      - name: "Build onefile exe (x86)"
         shell: pwsh
+        run: |
+          python -m pip install --upgrade pyinstaller
+          python -m PyInstaller --onefile --name rsb_client_py32 rsb_client.py
+      - uses: actions/upload-artifact@v7
+        with:
+          name: rsb_client_py_x86
+          path: dist/rsb_client_py32.exe
+
+  release:
+    needs: [build-x64, build-x86]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v7
+        with:
+          pattern: rsb_client_py_*
+          merge-multiple: true
+          path: dist
+      - name: "Publish as release (tag: latest)"
+        shell: bash
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh release delete latest --yes --cleanup-tag 2>$null
-          gh release create latest dist/rsb_client_py.exe `
-            --title "rsb_client_py (auto-built)" `
-            --notes "Automatically built from ${{ github.sha }} on windows-latest with PyInstaller onefile. Download: rsb_client_py.exe"
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest dist/rsb_client_py.exe dist/rsb_client_py32.exe \
+            --title "rsb_client_py (auto-built)" \
+            --notes "Automatically built from ${{ github.sha }} on windows-latest with PyInstaller onefile. Assets: rsb_client_py.exe (x64), rsb_client_py32.exe (x86). No Python installation needed on target - both are self-contained."
