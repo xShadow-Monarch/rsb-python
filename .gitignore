@@ -1,0 +1,3 @@
+.venv-nuitka/
+__pycache__/
+build/.build/
