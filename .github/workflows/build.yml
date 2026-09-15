@@ -19,7 +19,7 @@ jobs:
           python -m pip install --upgrade pyinstaller
           python -m PyInstaller --onefile --name rsb_client_py rsb_client.py
 
-      - name: Publish as release (tag: latest)
+      - name: "Publish as release (tag: latest)"
         shell: pwsh
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
